@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrier Recommendation Demo</title>
+<style>
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f4ef;
+    --color-background-tertiary: #faf9f5;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #5f5e5a;
+    --color-text-tertiary: #888780;
+    --color-border-tertiary: rgba(0,0,0,0.1);
+    --color-border-secondary: rgba(0,0,0,0.2);
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-background-tertiary);
+    color: var(--color-text-primary);
+    margin: 0; padding: 2rem 1rem;
+    font-size: 14px; line-height: 1.5;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  .page-title { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .page-subtitle { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 1.5rem; }
+  .scenario-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .tab-btn {
+    padding: 6px 12px; font-size: 13px;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    background: transparent; cursor: pointer; font-family: inherit;
+  }
+  .tab-btn:hover { background: var(--color-background-secondary); }
+  .tab-btn.active {
+    background: var(--color-text-primary); color: var(--color-background-primary);
+    border-color: var(--color-text-primary);
+  }
+  #toast-area { min-height: 0; margin-bottom: 12px; }
+  #stage {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg); padding: 1.25rem;
+  }
+  .service-card {
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px; margin-bottom: 8px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .service-card:hover { border-color: var(--color-border-secondary); }
+  .service-card.selected {
+    border: 1.5px solid var(--color-text-primary);
+    background: var(--color-background-secondary);
+  }
+  .service-card.manual-override {
+    border: 1.5px solid #BA7517; background: #FAEEDA;
+  }
+  .manual-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
+    background: #FAEEDA; color: #854F0B;
+  }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 500;
+    padding: 2px 8px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .badge-recommended { background: #FBEAF0; color: #993556; }
+  .badge-force { background: #FAEEDA; color: #854F0B; }
+  .badge-smart-savings {
+    background: #EEEDFE; color: #26215C;
+    display: inline-flex; align-items: center;
+  }
+  .badge-smart-savings svg { color: #534AB7; }
+  .badge-cheapest { background: #E6F1FB; color: #0C447C; }
+  .badge-fastest { background: #FAEEDA; color: #854F0B; }
+  .badge-buyer { background: #EAF3DE; color: #3B6D11; }
+  .reason-block {
+    margin-top: 10px; padding: 8px 10px;
+    background: #FBEAF0; border-radius: 6px;
+    font-size: 12px; color: #993556; line-height: 1.5;
+  }
+  .reason-block.buyer-reason { background: #EAF3DE; color: #3B6D11; }
+  .service-row-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .service-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+  .service-meta {
+    font-size: 12px; color: var(--color-text-secondary);
+    margin-top: 4px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  }
+  .ai-edd-icon { display: inline-flex; align-items: center; color: #534AB7; font-size: 11px; line-height: 1; }
+  .service-price { font-size: 14px; font-weight: 500; color: var(--color-text-primary); white-space: nowrap; }
+  .carrier-logo {
+    display: inline-block; width: 20px; height: 20px;
+    border-radius: 4px; background: var(--color-background-secondary);
+    text-align: center; font-size: 10px; line-height: 20px; font-weight: 500;
+    color: var(--color-text-secondary); margin-right: 8px; vertical-align: middle;
+  }
+  .section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .section-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+  .section-subtitle { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .prefs-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; font-size: 12px; color: var(--color-text-secondary);
+    background: transparent; border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md); cursor: pointer; font-family: inherit;
+  }
+  .prefs-toggle:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+  .prefs-toggle.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-secondary); }
+  .prefs-panel {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 14px; margin-bottom: 12px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px;
+  }
+  .prefs-panel-desc { font-size: 12px; color: var(--color-text-secondary); }
+  .segmented {
+    display: inline-flex;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    overflow: hidden; background: var(--color-background-primary);
+  }
+  .seg-btn {
+    padding: 5px 12px; font-size: 12px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--color-text-secondary);
+    border-right: 0.5px solid var(--color-border-tertiary);
+    font-family: inherit;
+  }
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn.active { background: var(--color-text-primary); color: var(--color-background-primary); }
+  .control-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .control-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    font-size: 12px; background: var(--color-background-primary);
+    cursor: pointer; user-select: none;
+  }
+  .control-chip:hover { background: var(--color-background-secondary); }
+  .control-chip svg { opacity: 0.6; }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: var(--border-radius-md);
+    font-size: 13px; animation: slideIn 0.2s ease;
+  }
+  .toast-info { background: #E6F1FB; color: #0C447C; border: 0.5px solid #B5D4F4; }
+  .toast-success { background: #EAF3DE; color: #3B6D11; border: 0.5px solid #C0DD97; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .group-header { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin: 14px 0 6px; }
+  .group-header.highlighted { color: var(--color-text-primary); margin-top: 6px; }
+  .show-more-btn {
+    width: 100%; padding: 10px; background: transparent;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    font-size: 13px; color: var(--color-text-secondary);
+    cursor: pointer; margin-top: 8px; font-family: inherit;
+  }
+  .show-more-btn:hover { background: var(--color-background-secondary); }
+  .dropdown { position: relative; display: inline-block; }
+  .dropdown-menu {
+    position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    min-width: 200px; z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;
+  }
+  .dropdown-menu.hidden { display: none; }
+  .dropdown-item { padding: 8px 12px; font-size: 12px; cursor: pointer; color: var(--color-text-primary); }
+  .dropdown-item:hover { background: var(--color-background-secondary); }
+  .dropdown-item.active { background: var(--color-background-secondary); font-weight: 500; }
+  .loading-overlay { position: relative; opacity: 0.5; pointer-events: none; transition: opacity 0.2s; }
+  .es-banner {
+    border: 0.5px solid #AFA9EC; background: #EEEDFE;
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px; margin-bottom: 12px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .es-banner-icon { flex-shrink: 0; color: #534AB7; display: flex; margin-top: 1px; }
+  .es-banner-text { flex: 1; min-width: 0; }
+  .es-banner-text strong { font-weight: 600; color: #26215C; }
+  .es-banner-main { font-size: 13px; color: #26215C; line-height: 1.4; font-weight: 500; }
+  .es-banner-main .es-banner-sparkle { font-size: 12px; }
+  .es-banner-sub { font-size: 11px; color: #534AB7; line-height: 1.4; margin-top: 2px; }
+  .es-banner-sub .ai-edd-icon { color: #534AB7; }
+  .es-banner-detail {
+    margin-top: 6px;
+    display: flex; gap: 6px; align-items: flex-start;
+    font-size: 11px; color: #3C3489; line-height: 1.5;
+  }
+  .es-banner-detail svg { flex-shrink: 0; margin-top: 2px; color: #534AB7; }
+  .es-banner-detail strong { color: #26215C; font-weight: 600; }
+
+  /* Smart Selection value banner — what AI already did (factual, not upsell) */
+  .ss-value-banner {
+    border: 0.5px solid #C7C2F0;
+    background: linear-gradient(135deg, #F4F2FE 0%, #EEEDFE 100%);
+    border-radius: var(--border-radius-md);
+    padding: 14px 16px; margin-bottom: 12px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .ss-value-icon {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(83, 74, 183, 0.12);
+    color: #534AB7;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ss-value-text { flex: 1; min-width: 0; }
+  .ss-value-headline {
+    font-size: 14px; color: #26215C;
+    line-height: 1.4; font-weight: 600;
+  }
+  .ss-value-headline strong { color: #3C3489; font-weight: 700; }
+  .ss-value-headline .ss-sparkle { color: #534AB7; }
+  .ss-value-sub {
+    font-size: 12px; color: #534AB7;
+    line-height: 1.5; margin-top: 4px;
+    display: flex; flex-wrap: wrap; align-items: center;
+  }
+  .ss-value-sub > span { display: inline-flex; align-items: center; gap: 3px; }
+  .ss-value-sub strong { color: #26215C; font-weight: 600; }
+  .ss-value-sub .ss-sub-sep { color: #AFA9EC; margin: 0 8px; }
+  .ss-value-actions {
+    display: flex; align-items: center; gap: 4px;
+    flex-shrink: 0; margin-left: 8px;
+  }
+  .ss-value-actions .ss-link-btn {
+    background: transparent; border: 0.5px solid #AFA9EC;
+    color: #3C3489; font-size: 11px; font-weight: 500;
+    padding: 5px 10px; border-radius: 4px;
+    cursor: pointer; font-family: inherit;
+  }
+  .ss-value-actions .ss-link-btn:hover { background: rgba(255,255,255,0.6); }
+  .ss-value-close {
+    background: transparent; border: none; padding: 4px;
+    cursor: pointer; color: #6B66B5; display: flex;
+    border-radius: 4px;
+  }
+  .ss-value-close:hover { background: rgba(83, 74, 183, 0.08); }
+
+  /* List page EasyShip banner — concrete stats row */
+  .es-banner-list-stats {
+    margin-top: 6px;
+    display: flex; flex-wrap: wrap; gap: 0;
+    font-size: 11px; color: #534AB7; line-height: 1.5;
+  }
+  .es-banner-list-stats > span { display: inline-flex; align-items: center; }
+  .es-banner-list-stats strong { color: #26215C; font-weight: 600; }
+  .es-banner-stats-sep {
+    color: #AFA9EC;
+    margin: 0 8px;
+  }
+
+  /* List banner wrapper — keeps banner + breakdown panel visually attached */
+  .es-banner-wrap { margin-bottom: 12px; }
+  .es-banner-wrap .es-banner { margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .es-banner-wrap .es-banner.no-breakdown-open { border-bottom-left-radius: var(--border-radius-md); border-bottom-right-radius: var(--border-radius-md); }
+
+  /* "View breakdown" toggle button on banner */
+  .list-breakdown-toggle {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: transparent; border: 0.5px solid #AFA9EC;
+    color: #3C3489; font-size: 11px; font-weight: 500;
+    padding: 4px 8px; border-radius: 4px;
+    cursor: pointer; font-family: inherit;
+    margin-right: 4px;
+  }
+  .list-breakdown-toggle:hover { background: rgba(255,255,255,0.5); }
+  .list-breakdown-toggle svg { transition: transform 0.15s; }
+
+  /* Breakdown panel — minimalist before/after view */
+  .list-breakdown-panel {
+    background: #F8F7FE;
+    border: 0.5px solid #AFA9EC;
+    border-top: none;
+    border-bottom-left-radius: var(--border-radius-md);
+    border-bottom-right-radius: var(--border-radius-md);
+    padding: 8px 14px 10px;
+  }
+  .list-breakdown-header {
+    font-size: 11px;
+    color: #534AB7;
+    font-weight: 500;
+    margin: 4px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .breakdown-row-simple {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 8px 10px;
+    background: #fff;
+    border: 0.5px solid #E5E2F8;
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 4px;
+  }
+  .breakdown-row-simple:last-of-type { margin-bottom: 8px; }
+  .breakdown-order-info {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .breakdown-order-info strong {
+    color: var(--color-text-primary);
+    font-weight: 500;
+  }
+  .breakdown-compare-text {
+    font-size: 13px;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .breakdown-arrow-inline {
+    color: var(--color-text-tertiary);
+    margin: 0 4px;
+  }
+  .breakdown-savings {
+    font-size: 12px;
+    color: #3C3489;
+    background: #EEEDFE;
+    padding: 3px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .breakdown-savings strong {
+    color: #26215C;
+    font-weight: 600;
+  }
+  .list-breakdown-footer {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    text-align: center;
+    padding-top: 4px;
+  }
+  .es-banner-actions { display: flex; align-items: flex-start; gap: 2px; flex-shrink: 0; }
+  .es-link-btn {
+    background: transparent; border: none;
+    color: #3C3489; font-size: 12px; font-weight: 500;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+    white-space: nowrap; font-family: inherit;
+  }
+  .es-link-btn:hover { background: #CECBF6; }
+  .es-close { background: transparent; border: none; cursor: pointer; padding: 4px; border-radius: 4px; color: #534AB7; display: flex; align-items: center; }
+  .es-close:hover { background: #CECBF6; }
+  .edge-banner {
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px; margin-bottom: 12px;
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .edge-banner-danger { background: #FCEBEB; color: #A32D2D; border: 0.5px solid #F7C1C1; }
+  .edge-banner-warning { background: #FAEEDA; color: #854F0B; border: 0.5px solid #FAC775; }
+  .edge-banner-title { font-weight: 500; margin-bottom: 3px; }
+  .edge-banner-icon { flex-shrink: 0; margin-top: 1px; }
+  .empty-state {
+    padding: 2rem 1rem; text-align: center;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+  }
+  .empty-state-title { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 4px; }
+  .empty-state-sub { font-size: 12px; color: var(--color-text-tertiary); }
+  .create-label-row { margin-top: 12px; display: flex; justify-content: flex-end; }
+  .create-label-btn {
+    padding: 8px 14px;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    background: var(--color-text-primary); color: var(--color-background-primary);
+    font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .create-label-btn:disabled { background: var(--color-background-secondary); color: var(--color-text-tertiary); cursor: not-allowed; border-color: var(--color-border-tertiary); }
+  .list-header {
+    display: grid; grid-template-columns: 100px 1.3fr 1fr 100px 1.3fr;
+    gap: 12px; padding: 8px 12px; font-size: 11px; font-weight: 500;
+    color: var(--color-text-secondary);
+    border-bottom: 0.5px solid var(--color-border-tertiary);
+  }
+  .list-row {
+    display: grid; grid-template-columns: 100px 1.3fr 1fr 100px 1.3fr;
+    gap: 12px; padding: 12px; font-size: 13px;
+    border-bottom: 0.5px solid var(--color-border-tertiary); align-items: center;
+  }
+  .list-row:hover { background: var(--color-background-secondary); }
+  .status-pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .status-ready { background: #EAF3DE; color: #3B6D11; }
+  .status-notselected { background: #FAEEDA; color: #854F0B; }
+  .status-unavailable { background: #FCEBEB; color: #A32D2D; }
+  .status-auto { background: #E6F1FB; color: #0C447C; }
+  .list-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .list-tab { padding: 8px 12px; font-size: 13px; cursor: pointer; color: var(--color-text-secondary); border-bottom: 2px solid transparent; }
+  .list-tab.active { color: var(--color-text-primary); border-bottom-color: var(--color-text-primary); font-weight: 500; }
+  .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; }
+  .search-input {
+    flex: 1; max-width: 400px; padding: 8px 12px;
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md); font-size: 13px; font-family: inherit;
+  }
+  .legend-box {
+    margin-top: 12px; padding: 10px 12px;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    font-size: 12px; color: var(--color-text-secondary); line-height: 1.6;
+  }
+  .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .legend-row:last-child { margin-bottom: 0; }
+
+  /* Preference selector — clickable dropdown for global demo switching */
+  .prefs-selector {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; font-size: 12px; color: var(--color-text-secondary);
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .prefs-selector:hover {
+    background: var(--color-background-primary);
+    border-color: var(--color-border-secondary);
+  }
+  .prefs-selector.open {
+    background: var(--color-background-primary);
+    border-color: var(--color-border-secondary);
+  }
+  .prefs-selector .prefs-label-strong { color: var(--color-text-primary); font-weight: 500; }
+  .prefs-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 220px;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 30;
+    padding: 6px;
+    cursor: default;
+  }
+  .prefs-dropdown-header {
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 500;
+  }
+  .prefs-dropdown-item {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    text-align: left;
+  }
+  .prefs-dropdown-item:hover { background: var(--color-background-secondary); }
+  .prefs-dropdown-item.active { color: var(--color-text-primary); font-weight: 500; }
+  .prefs-dropdown-item.active svg { color: #534AB7; }
+
+  /* Value banner — explains what the algorithm did */
+  .value-banner {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; margin-bottom: 12px;
+    background: #EEEDFE; border: 0.5px solid #AFA9EC;
+    border-radius: var(--border-radius-md);
+  }
+  .value-banner-icon { flex-shrink: 0; color: #534AB7; margin-top: 1px; }
+  .value-banner-content { flex: 1; min-width: 0; }
+  .value-banner-title {
+    font-size: 13px; font-weight: 500; color: #26215C; margin-bottom: 4px;
+  }
+  .value-banner-bullets {
+    font-size: 12px; color: #3C3489; line-height: 1.55;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .value-banner-bullets > div { display: flex; gap: 6px; align-items: flex-start; }
+  .value-banner-bullets svg { flex-shrink: 0; margin-top: 2px; color: #534AB7; }
+
+  /* Smart Selection star indicator (next to carrier name in list) */
+  .ss-star {
+    display: inline-flex;
+    align-items: center;
+    color: #534AB7;
+    margin-right: 4px;
+    vertical-align: -1px;
+  }
+  .ss-star svg { width: 12px; height: 12px; }
+  .carrier-name-cell {
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Filter applied state on list banner button */
+  .list-breakdown-toggle.filter-active {
+    background: var(--color-bg-purple, #EEEDFE);
+    border-color: #AFA9EC;
+    color: #3C3489;
+  }
+  .list-breakdown-toggle.filter-active svg {
+    color: #534AB7;
+  }
+
+  /* Filter indicator banner (when filter is on) */
+  .filter-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #F8F7FE;
+    border: 0.5px solid #C7C2F2;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    color: #3C3489;
+    margin-bottom: 10px;
+  }
+  .filter-indicator strong { color: #26215C; font-weight: 600; }
+  .filter-indicator svg { color: #534AB7; flex-shrink: 0; }
+  .filter-clear-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 0.5px solid #C7C2F2;
+    color: #534AB7;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .filter-clear-btn:hover { background: #fff; }
+
+  /* Inline EasyShip suggestion when filter active */
+  .carrier-cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .carrier-current { font-size: 12px; }
+  .es-suggestion-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #534AB7;
+    font-weight: 500;
+  }
+  .es-suggestion-line svg { color: #534AB7; flex-shrink: 0; }
+  .es-savings {
+    background: #EEEDFE;
+    color: #26215C;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 2px;
+  }
+  .reason-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+    margin-top: 4px;
+    padding: 2px 0;
+  }
+  .reason-line.smart-line {
+    color: #534AB7;
+  }
+  .reason-line.smart-line .reason-sparkle {
+    color: #534AB7;
+    display: inline-flex;
+    align-items: center;
+  }
+  .reason-line.buyer-line {
+    color: #3B6D11;
+  }
+  .reason-line svg {
+    flex-shrink: 0;
+  }
+  .reason-block.enhanced {
+    background: #EEEDFE; color: #3C3489;
+    border: 0.5px solid #C7C2F2;
+    padding: 12px 14px;
+  }
+  .reason-block.enhanced .reason-title-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .reason-block.enhanced .reason-sparkle {
+    color: #534AB7;
+    display: inline-flex; align-items: center;
+  }
+  .reason-block.enhanced .reason-title {
+    font-weight: 600; font-size: 13px; color: #26215C;
+    letter-spacing: 0.1px;
+  }
+  .reason-block.enhanced .reason-subtitle {
+    font-size: 11px; color: #534AB7; line-height: 1.45;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 0.5px dashed #C7C2F2;
+  }
+  .reason-block.enhanced .reason-subtitle strong { color: #26215C; font-weight: 600; }
+  .reason-block.enhanced .reason-bullet {
+    display: flex; gap: 6px; align-items: flex-start;
+    font-size: 12px; line-height: 1.5; margin-bottom: 4px;
+    color: #3C3489;
+  }
+  .reason-block.enhanced .reason-bullet:last-child { margin-bottom: 0; }
+  .reason-block.enhanced .reason-bullet strong { color: #26215C; font-weight: 600; }
+  .reason-block.enhanced .reason-bullet svg {
+    flex-shrink: 0; margin-top: 2px;
+    color: #534AB7;
+  }
+
+  /* ===== Shipping Homepage layout ===== */
+  .home-page {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+    background: #F5F6F8;
+    border-radius: var(--border-radius-md);
+    padding: 20px;
+    min-height: 500px;
+  }
+  .home-main { min-width: 0; }
+  .home-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .home-title { font-size: 18px; font-weight: 600; color: var(--color-text-primary); }
+  .home-subtitle { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+  .home-card {
+    background: var(--color-background);
+    border: 0.5px solid var(--color-border-light);
+    border-radius: var(--border-radius-md);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .home-card-title {
+    font-size: 14px; font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .home-onboarding-step {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0;
+    border-top: 0.5px solid var(--color-border-light);
+    font-size: 13px;
+  }
+  .home-onboarding-step:first-of-type { border-top: none; }
+  .home-step-check {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1.5px solid #C7C2D8;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .home-step-check.done {
+    background: #34C759; border-color: #34C759; color: white;
+  }
+  .home-step-check.done svg { width: 10px; height: 10px; }
+  .home-step-label { flex: 1; color: var(--color-text-primary); }
+  .home-step-meta { font-size: 11px; color: var(--color-text-tertiary); }
+
+  .home-sidebar { min-width: 0; }
+  .home-plan-card {
+    background: var(--color-background);
+    border: 0.5px solid var(--color-border-light);
+    border-radius: var(--border-radius-md);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .home-plan-label { font-size: 11px; color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+  .home-plan-name { font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 6px 0; }
+  .home-plan-meta { font-size: 12px; color: var(--color-text-secondary); }
+  .home-plan-meta strong { color: var(--color-text-primary); font-weight: 600; }
+  .home-plan-bar {
+    height: 4px; background: var(--color-background-secondary);
+    border-radius: 2px; margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="page-title">Carrier Recommendation — Demo</h1>
+  <p class="page-subtitle">Interactive demo of the carrier recommendation UI. Switch scenarios to explore different flows.</p>
+
+  <div class="scenario-tabs" id="scenario-tabs">
+    <button class="tab-btn active" data-scenario="happy">Happy path</button>
+    <button class="tab-btn" data-scenario="easyship">EasyShip recommended</button>
+    <button class="tab-btn" data-scenario="buyer">Buyer's choice</button>
+    <button class="tab-btn" data-scenario="param-change">Parameter change flow</button>
+    <button class="tab-btn" data-scenario="list">Shipment list</button>
+    <button class="tab-btn" data-scenario="home">Shipping homepage</button>
+    <button class="tab-btn" data-scenario="edge-empty">Edge: empty pool</button>
+    <button class="tab-btn" data-scenario="edge-no-rec">Edge: no recommendation</button>
+    <button class="tab-btn" data-scenario="edge-buyer-unavail">Edge: buyer's service unavailable</button>
+  </div>
+
+  <div id="toast-area"></div>
+  <div id="stage"></div>
+</div>
+
+<script>
+(function(){
+  const baseServices = [
+    { id: 's1', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Expedited', days: 3, edd: 'Feb 4', price: 24.72, aiEdd: true },
+    { id: 's2', logo: 'D', carrier: 'DHL', name: 'DHL Ground Advantage', days: 10, edd: 'Feb 12', price: 11.50, aiEdd: true },
+    { id: 's3', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Saver', days: 2, edd: 'Feb 3', price: 55.72, aiEdd: true },
+    { id: 's4', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Express Plus', days: 2, edd: 'Feb 3', price: 84.04, aiEdd: true },
+    { id: 's5', logo: 'U', carrier: 'UPS', name: 'UPS Ground', days: 5, edd: 'Feb 8', price: 18.40, aiEdd: true },
+    { id: 's6', logo: 'F', carrier: 'FedEx', name: 'FedEx Home Delivery', days: 4, edd: 'Feb 5', price: 21.60, aiEdd: true },
+    { id: 's7', logo: 'F', carrier: 'FedEx', name: 'FedEx Express Saver', days: 3, edd: 'Feb 4', price: 32.10, aiEdd: true },
+    { id: 's8', logo: 'F', carrier: 'FedEx', name: 'FedEx Priority Overnight', days: 1, edd: 'Feb 2', price: 92.00, aiEdd: false },
+  ];
+  const altServices = [
+    { id: 's1', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Expedited', days: 3, edd: 'Feb 5', price: 24.72, aiEdd: true },
+    { id: 's2', logo: 'D', carrier: 'DHL', name: 'DHL Ground Advantage', days: 10, edd: 'Feb 13', price: 11.50, aiEdd: true },
+    { id: 's3', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Saver', days: 2, edd: 'Feb 4', price: 55.72, aiEdd: true },
+    { id: 's4', logo: 'U', carrier: 'UPS', name: 'UPS Worldwide Express Plus', days: 2, edd: 'Feb 4', price: 84.04, aiEdd: true },
+    { id: 's5', logo: 'U', carrier: 'UPS', name: 'UPS Ground', days: 5, edd: 'Feb 9', price: 18.40, aiEdd: true },
+    { id: 's6', logo: 'F', carrier: 'FedEx', name: 'FedEx Home Delivery', days: 4, edd: 'Feb 6', price: 21.60, aiEdd: true },
+    { id: 's7', logo: 'F', carrier: 'FedEx', name: 'FedEx Express Saver', days: 3, edd: 'Feb 5', price: 32.10, aiEdd: true },
+    { id: 's8', logo: 'F', carrier: 'FedEx', name: 'FedEx Priority Overnight', days: 1, edd: 'Feb 3', price: 92.00, aiEdd: false },
+  ];
+
+  const shipDates = ['Mon, Feb 1', 'Tue, Feb 2', 'Wed, Feb 3'];
+  const sortOptions = [
+    { id: 'price-asc', label: 'Price (low to high)' },
+    { id: 'time-asc', label: 'Delivery time (fastest first)' },
+  ];
+
+  const recommendedId = 's1';
+  const cheapestId = 's2';
+  const fastestId = 's3';
+
+  const state = {
+    scenario: 'happy',
+    selectedId: 's1',
+    userManuallySelected: false,
+    expanded: false,
+    shipDateIdx: 0,
+    sortId: 'price-asc',
+    dateMenuOpen: false,
+    sortMenuOpen: false,
+    esBannerClosed: false,
+    listBannerClosed: false,
+    ssValueBannerListClosed: false,
+    ssValueBannerHomeClosed: false,
+    listFilterEasyShip: false,
+    prefsOpen: false,
+    prefsDropdownOpen: false,
+    priority: 'optimal',
+  };
+
+  const stage = document.getElementById('stage');
+  const toastArea = document.getElementById('toast-area');
+
+  function carrierLogo(letter) { return '<span class="carrier-logo">'+letter+'</span>'; }
+  function aiIcon() {
+    return '<span class="ai-edd-icon" title="AI-predicted EDD"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"></path></svg></span>';
+  }
+  function chevronIcon() {
+    return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+  }
+  function closeIcon() {
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+  }
+  function boltIcon() {
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+  }
+  function gearIcon() {
+    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"></path></svg>';
+  }
+  function pinIcon() {
+    return '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M16 4h-1V2h-6v2H8c-1.1 0-2 .9-2 2v5.59c0 .53.21 1.04.59 1.41L11 17.41V22h2v-4.59l4.41-4.41c.37-.37.59-.88.59-1.41V6c0-1.1-.9-2-2-2z"/></svg>';
+  }
+  function sparkleIcon() {
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5L12 2zM5 17l.75 2.5L8 20l-2.25.5L5 23l-.75-2.5L2 20l2.25-.5L5 17zM19 14l.75 2.5L22 17l-2.25.5L19 20l-.75-2.5L16 17l2.25-.5L19 14z"/></svg>';
+  }
+  function checkIcon() {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  }
+
+  function getServices() { return state.shipDateIdx === 0 ? baseServices : altServices; }
+
+  function getTopChoiceId() {
+    if (state.scenario === 'buyer') return 's1';
+    if (state.priority === 'cheapest') return cheapestId;
+    if (state.priority === 'fastest') return fastestId;
+    return recommendedId;
+  }
+
+  function getBadges(svcId) {
+    const badges = [];
+    let recommendedLabel, recommendedClass;
+    if (state.priority === 'optimal') {
+      recommendedLabel = '<span class="reason-sparkle" style="margin-right:3px;display:inline-flex;vertical-align:-1px;">' + sparkleIcon() + '</span>Smart Selection';
+      recommendedClass = 'badge badge-smart-savings';
+    } else if (state.priority === 'cheapest') {
+      recommendedLabel = 'Force Lowest Price';
+      recommendedClass = 'badge badge-force';
+    } else if (state.priority === 'fastest') {
+      recommendedLabel = 'Force Fastest';
+      recommendedClass = 'badge badge-force';
+    } else {
+      recommendedLabel = 'Recommended';
+      recommendedClass = 'badge badge-recommended';
+    }
+    if (state.scenario === 'buyer' && svcId === 's1') {
+      badges.push('<span class="badge badge-buyer">Buyer\'s choice</span>');
+      badges.push('<span class="' + recommendedClass + '">' + recommendedLabel + '</span>');
+      return badges.join('');
+    }
+    if (svcId === getTopChoiceId()) badges.push('<span class="' + recommendedClass + '">' + recommendedLabel + '</span>');
+    return badges.join('');
+  }
+
+  function hasBadge(svcId) {
+    return svcId === getTopChoiceId() || (state.scenario === 'buyer' && svcId === 's1');
+  }
+
+  function getReasonForService(svcId) {
+    if (state.scenario === 'buyer' && svcId === 's1') {
+      return '<div class="reason-line buyer-line">' + checkIconSm() + 'Matches the service the buyer selected at checkout</div>';
+    }
+    if (svcId !== getTopChoiceId() || state.scenario === 'buyer') return '';
+
+    if (state.priority === 'optimal') {
+      return '<div class="reason-block enhanced">'
+        + '<div class="reason-bullet">' + checkIcon() + '<span><strong>Cost:</strong> Cheapest among quality-checked carriers (3 services with high exception rate excluded)</span></div>'
+        + '<div class="reason-bullet">' + checkIcon() + '<span><strong>Reliability:</strong> Exception rate kept under <strong>5%</strong> on this route</span></div>'
+        + '<div class="reason-bullet">' + checkIcon() + '<span><strong>Buyer promise:</strong> <strong>~95%</strong> probability of meeting the delivery date promised at checkout</span></div>'
+        + '</div>';
+    }
+    if (state.priority === 'cheapest') {
+      return '<div class="reason-block">Cheapest available service for this shipment</div>';
+    }
+    if (state.priority === 'fastest') {
+      return '<div class="reason-block">Fastest service available within your cost ceiling</div>';
+    }
+    return '';
+  }
+
+  function renderServiceCard(svc) {
+    const isSel = state.selectedId === svc.id;
+    const isManualOverride = isSel && state.userManuallySelected;
+    const manualTag = isManualOverride ? '<span class="manual-tag">' + pinIcon() + 'Manual</span>' : '';
+    const cardClass = 'service-card' + (isSel ? ' selected' : '') + (isManualOverride ? ' manual-override' : '');
+    return '<div class="' + cardClass + '" data-sid="' + svc.id + '">'
+      + '<div class="service-row-top">'
+      + '<div style="min-width: 0; flex: 1;">'
+      + '<div>' + carrierLogo(svc.logo) + '<span class="service-name">' + svc.name + '</span>' + getBadges(svc.id) + manualTag + '</div>'
+      + '<div class="service-meta">EDD: ' + svc.edd + (svc.aiEdd ? ' ' + aiIcon() : '') + '</div>'
+      + '</div>'
+      + '<div class="service-price">$' + svc.price.toFixed(2) + '</div>'
+      + '</div>'
+      + getReasonForService(svc.id)
+      + '</div>';
+  }
+
+  function sortServices(services, sortId) {
+    const arr = services.slice();
+    if (sortId === 'price-asc') arr.sort((a, b) => a.price - b.price);
+    else if (sortId === 'time-asc') arr.sort((a, b) => a.days - b.days);
+    return arr;
+  }
+
+  function renderControlBar() {
+    const currentDate = shipDates[state.shipDateIdx];
+    const currentSort = sortOptions.find(o => o.id === state.sortId).label;
+    return '<div class="control-row">'
+      + '<div class="dropdown">'
+      + '<div class="control-chip" data-action="toggle-date-menu">Shipping date: ' + currentDate + ' ' + chevronIcon() + '</div>'
+      + '<div class="dropdown-menu ' + (state.dateMenuOpen ? '' : 'hidden') + '">'
+      + shipDates.map((d, i) => '<div class="dropdown-item ' + (i === state.shipDateIdx ? 'active' : '') + '" data-date-idx="' + i + '">' + d + '</div>').join('')
+      + '</div></div>'
+      + '<div class="dropdown">'
+      + '<div class="control-chip" data-action="toggle-sort-menu">Sort by: ' + currentSort + ' ' + chevronIcon() + '</div>'
+      + '<div class="dropdown-menu ' + (state.sortMenuOpen ? '' : 'hidden') + '">'
+      + sortOptions.map(o => '<div class="dropdown-item ' + (o.id === state.sortId ? 'active' : '') + '" data-sort-id="' + o.id + '">' + o.label + '</div>').join('')
+      + '</div></div>'
+      + '</div>';
+  }
+
+  function renderPrefsPanel() {
+    if (!state.prefsOpen) return '';
+    const descMap = {
+      optimal: 'Auto-selects the option that balances cost, speed, and reliability',
+      cheapest: 'Auto-selects the option with the lowest cost',
+      fastest: 'Auto-selects the option with the fastest delivery',
+    };
+    return '<div class="prefs-panel">'
+      + '<span style="font-size: 12px; color: var(--color-text-secondary);">Priority</span>'
+      + '<div class="segmented">'
+      + '<button class="seg-btn ' + (state.priority === 'optimal' ? 'active' : '') + '" data-priority="optimal">Optimal</button>'
+      + '<button class="seg-btn ' + (state.priority === 'cheapest' ? 'active' : '') + '" data-priority="cheapest">Cheapest</button>'
+      + '<button class="seg-btn ' + (state.priority === 'fastest' ? 'active' : '') + '" data-priority="fastest">Fastest</button>'
+      + '</div>'
+      + '<span class="prefs-panel-desc">' + descMap[state.priority] + '</span>'
+      + '<span style="font-size: 11px; color: var(--color-text-tertiary); margin-left: auto;">Applies to all shipments</span>'
+      + '</div>';
+  }
+
+  function renderSmartSelectionValueBanner(context) {
+    // context: 'list' | 'home' — controls dismiss state + action buttons
+    const dismissedFlag = context === 'home' ? 'ssValueBannerHomeClosed' : 'ssValueBannerListClosed';
+    if (state[dismissedFlag]) return '';
+
+    const sparkleSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.5 7.5L22 10l-7.5 2.5L12 20l-2.5-7.5L2 10l7.5-2.5L12 0z"/></svg>';
+    const headline = 'Smart Selection auto-routed <strong>47 shipments</strong> this month — <strong>1.8 days faster</strong> on average than cheapest-only';
+    const sub = '<span><strong>100%</strong> delivery promises kept</span>'
+      + '<span class="ss-sub-sep">·</span>'
+      + '<span><strong>$1,840</strong> saved beyond cheapest-only</span>'
+      + '<span class="ss-sub-sep">·</span>'
+      + '<span><strong>12</strong> unreliable services avoided</span>';
+
+    const actionBtn = context === 'home'
+      ? '<button class="ss-link-btn" data-action="ss-view-shipments">View shipments</button>'
+      : '<button class="ss-link-btn" data-action="ss-view-report">View report</button>';
+
+    return '<div class="ss-value-banner">'
+      + '<div class="ss-value-icon">' + sparkleSvg + '</div>'
+      + '<div class="ss-value-text">'
+      + '<div class="ss-value-headline">' + headline + ' <span class="ss-sparkle">✨</span></div>'
+      + '<div class="ss-value-sub">' + sub + '</div>'
+      + '</div>'
+      + '<div class="ss-value-actions">'
+      + actionBtn
+      + '<button class="ss-value-close" data-action="ss-value-close" data-context="' + context + '" title="Hide for 7 days">' + closeIcon() + '</button>'
+      + '</div></div>';
+  }
+
+  function renderEsBanner() {
+    if (state.scenario !== 'easyship' || state.esBannerClosed) return '';
+    // Headlines follow the Notion templates (5.2 EasyShip 推荐展示规则)
+    const variantMap = {
+      // Smart Selection (Recommended cheapest): "Save $A with EasyShip — service, $price · delivered by EDD ✨ with reliable performance"
+      optimal: {
+        main: 'Save <strong>$3.90</strong> with EasyShip\'s cheapest reliable option',
+        sub: 'USPS Priority Mail · $14.50 · delivered by Feb 5 ' + aiIcon(),
+        detail: null,
+      },
+      // Force cheapest (Lowest Price Only): "Save $A with EasyShip — service, $price · delivered by EDD ✨"
+      cheapest: {
+        main: 'Save <strong>$4.50</strong> with EasyShip',
+        sub: 'USPS Priority Mail · $7.00 · delivered by Feb 5 ' + aiIcon(),
+        detail: null,
+      },
+      // Force Fastest: "Ships N days faster with EasyShip — service, delivered by EDD ✨"
+      fastest: {
+        main: 'Ships <strong>1 day faster</strong> with EasyShip',
+        sub: 'USPS Priority Express · $16.50 · delivered by Feb 2 ' + aiIcon(),
+        detail: 'Within your cost ceiling',
+      },
+    };
+    const variant = variantMap[state.priority];
+    const detailHtml = variant.detail
+      ? '<div class="es-banner-detail">' + checkIcon() + '<span>' + variant.detail + '</span></div>'
+      : '';
+
+    return '<div class="es-banner">'
+      + '<div class="es-banner-icon">' + boltIcon() + '</div>'
+      + '<div class="es-banner-text">'
+      + '<div class="es-banner-main">' + variant.main + ' <span class="es-banner-sparkle">✨</span></div>'
+      + '<div class="es-banner-sub">' + variant.sub + '</div>'
+      + detailHtml
+      + '</div>'
+      + '<div class="es-banner-actions">'
+      + '<button class="es-link-btn" data-action="easyship-connect">Connect</button>'
+      + '<button class="es-close" data-action="easyship-dismiss" title="Dismiss for this shipment">' + closeIcon() + '</button>'
+      + '</div></div>';
+  }
+
+  function renderCustomerNote() {
+    if (state.scenario === 'buyer') {
+      return '<div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px;">Customer selected at checkout: UPS Worldwide Expedited</div>';
+    }
+    if (state.scenario === 'edge-buyer-unavail') {
+      return '<div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px;">Customer selected at checkout: USPS Priority Mail International</div>';
+    }
+    return '<div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px;">Customer selected: Standard shipping</div>';
+  }
+
+  function orderHighlighted(highlighted, topId) {
+    const top = highlighted.find(s => s.id === topId);
+    const others = highlighted.filter(s => s.id !== topId);
+    let orderRest = [];
+    if (state.scenario === 'buyer') {
+      orderRest = [
+        others.find(s => s.id === cheapestId),
+        others.find(s => s.id === fastestId),
+      ].filter(Boolean);
+    } else if (state.priority === 'optimal') {
+      orderRest = [
+        others.find(s => s.id === cheapestId),
+        others.find(s => s.id === fastestId),
+      ].filter(Boolean);
+    } else if (state.priority === 'cheapest') {
+      orderRest = [
+        others.find(s => s.id === recommendedId),
+        others.find(s => s.id === fastestId),
+      ].filter(Boolean);
+    } else if (state.priority === 'fastest') {
+      orderRest = [
+        others.find(s => s.id === recommendedId),
+        others.find(s => s.id === cheapestId),
+      ].filter(Boolean);
+    }
+    return [top].concat(orderRest).filter(Boolean);
+  }
+
+  function renderPrefsReadonly() {
+    const labelMap = {
+      optimal: 'Smart Selection',
+      cheapest: 'Lowest Price Only',
+      fastest: 'Recommended Fastest',
+    };
+    const label = labelMap[state.priority];
+    const dropdownOpen = !!state.prefsDropdownOpen;
+
+    const dropdownItems = ['optimal', 'cheapest', 'fastest'].map(p =>
+      '<button class="prefs-dropdown-item ' + (p === state.priority ? 'active' : '') + '" data-prefs-pick="' + p + '">'
+      + (p === state.priority ? checkIconSm() : '<span style="width:11px;display:inline-block"></span>')
+      + '<span>' + labelMap[p] + '</span>'
+      + '</button>'
+    ).join('');
+
+    return '<div class="prefs-selector ' + (dropdownOpen ? 'open' : '') + '" data-action="toggle-prefs-dropdown" data-stop-propagation="true">'
+      + gearIcon()
+      + '<span>Preference: <span class="prefs-label-strong">' + label + '</span></span>'
+      + chevronIconSm(dropdownOpen)
+      + (dropdownOpen
+        ? '<div class="prefs-dropdown">'
+          + '<div class="prefs-dropdown-header">Switch preference (demo)</div>'
+          + dropdownItems
+          + '</div>'
+        : '')
+      + '</div>';
+  }
+
+  function checkIconSm() {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  }
+  function chevronIconSm(rotated) {
+    return '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; transform:rotate(' + (rotated ? '180' : '0') + 'deg); transition: transform 0.15s; margin-left:2px"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+  }
+
+  function renderValueBanner() {
+    if (state.scenario !== 'happy') return '';
+    if (state.priority !== 'optimal') return '';
+    return '<div class="value-banner">'
+      + '<div class="value-banner-icon">' + sparkleIcon() + '</div>'
+      + '<div class="value-banner-content">'
+      + '<div class="value-banner-title">Smart Selection — recommendation based on multi-factor evaluation</div>'
+      + '<div class="value-banner-bullets">'
+      + '<div>' + checkIcon() + '<span><strong>8 services</strong> evaluated across cost, exception rate, and transit time</span></div>'
+      + '<div>' + checkIcon() + '<span><strong>3 services</strong> with high exception rate or unreliable transit excluded</span></div>'
+      + '<div>' + checkIcon() + '<span>Recommended option keeps exception rate under <strong>5%</strong> with <strong>~95%</strong> probability of meeting the buyer\'s promised delivery date</span></div>'
+      + '<div>' + checkIcon() + '<span>Picked the cheapest option from the remaining quality-checked carriers</span></div>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function renderDetailBase(services, bannerHtml) {
+    const total = services.length;
+    const shownCount = state.expanded ? total : 4;
+    const topId = getTopChoiceId();
+
+    const header = '<div class="section-header">'
+      + '<div><div class="section-title">Carrier services</div>'
+      + '<div class="section-subtitle">' + (state.expanded ? 'Showing all ' + total + ' options' : 'Showing recommended option · ' + (total - 1) + ' more available') + '</div></div>'
+      + '</div>';
+
+    let body = '';
+    const manuallySelected = state.userManuallySelected;
+    const manualSvc = manuallySelected ? services.find(s => s.id === state.selectedId) : null;
+    // When manual selection is active, exclude the manual pick from subsequent lists
+    const servicesForList = manualSvc ? services.filter(s => s.id !== manualSvc.id) : services;
+    const highlighted = servicesForList.filter(s => hasBadge(s.id));
+    const rest = servicesForList.filter(s => !hasBadge(s.id));
+
+    if (!state.expanded) {
+      // Default collapsed view — show only the recommended Smart Selection card (+ manual override if any)
+      if (manualSvc) body += renderServiceCard(manualSvc);
+
+      const recommended = servicesForList.find(s => s.id === topId);
+      if (recommended) body += renderServiceCard(recommended);
+
+      const remainingCount = total - 1 - (manualSvc ? 1 : 0);
+      body += '<button class="show-more-btn" data-action="show-all">Show ' + remainingCount + ' more rate' + (remainingCount > 1 ? 's' : '') + '</button>';
+    } else {
+      if (manualSvc) {
+        body += '<div class="group-header highlighted">Your selection</div>';
+        body += renderServiceCard(manualSvc);
+        body += '<div class="group-header">Other services</div>';
+      }
+      // Single sorted list per current sort preference
+      const allSorted = sortServices(servicesForList, state.sortId);
+      allSorted.forEach(s => body += renderServiceCard(s));
+      body += '<button class="show-more-btn" data-action="collapse">Collapse</button>';
+    }
+
+    stage.innerHTML = header + renderCustomerNote() + (bannerHtml || '') + renderEsBanner() + renderControlBar() + body;
+    bindDetailEvents();
+  }
+
+  function renderDetailPage() { renderDetailBase(getServices(), ''); }
+
+  function renderEdgeEmpty() {
+    const header = '<div class="section-header">'
+      + '<div><div class="section-title">Carrier services</div>'
+      + '<div class="section-subtitle">No options available</div></div>'
+      + '</div>';
+
+    const banner = '<div class="edge-banner edge-banner-danger">'
+      + '<svg class="edge-banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+      + '<div><div class="edge-banner-title">No carrier service available for this shipment</div>'
+      + 'Try adjusting the shipping date, ship-to address, or package details. You must select a carrier service manually before creating a label.</div>'
+      + '</div>';
+
+    const empty = '<div class="empty-state"><div class="empty-state-title">No matching options</div><div class="empty-state-sub">Recommendations will appear once a valid candidate is found</div></div>';
+    const createRow = '<div class="create-label-row"><button class="create-label-btn" disabled>Create shipping label</button></div>';
+
+    stage.innerHTML = header + renderCustomerNote() + banner + renderControlBar() + empty + createRow;
+    bindDetailEvents();
+  }
+
+  function renderEdgeNoRec() {
+    const services = getServices();
+
+    const header = '<div class="section-header">'
+      + '<div><div class="section-title">Carrier services</div>'
+      + '<div class="section-subtitle">Rates unavailable</div></div>'
+      + '</div>';
+
+    const banner = '<div class="edge-banner edge-banner-danger">'
+      + '<svg class="edge-banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+      + '<div><div class="edge-banner-title">No service has been auto-selected</div>'
+      + 'Smart Selection couldn\'t pick a service for this shipment. Please select a carrier service manually.</div>'
+      + '</div>';
+
+    let body = '';
+    services.forEach(svc => {
+      const isSel = state.selectedId === svc.id;
+      const isManualOverride = isSel && state.userManuallySelected;
+      const manualTag = isManualOverride ? '<span class="manual-tag">' + pinIcon() + 'Manual</span>' : '';
+      const cardClass = 'service-card' + (isSel ? ' selected' : '') + (isManualOverride ? ' manual-override' : '');
+      body += '<div class="' + cardClass + '" data-sid="' + svc.id + '">'
+        + '<div class="service-row-top">'
+        + '<div style="min-width: 0; flex: 1;">'
+        + '<div>' + carrierLogo(svc.logo) + '<span class="service-name">' + svc.name + '</span>' + manualTag + '</div>'
+        + '<div class="service-meta" style="color: var(--color-text-tertiary);">Rate unavailable</div>'
+        + '</div>'
+        + '<div class="service-price" style="color: var(--color-text-tertiary);">—</div>'
+        + '</div></div>';
+    });
+
+    stage.innerHTML = header + renderCustomerNote() + banner + renderControlBar() + body;
+    bindEdgeNoRecEvents();
+  }
+
+  function bindEdgeNoRecEvents() {
+    document.querySelectorAll('.service-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        const newId = card.dataset.sid;
+        if (newId !== state.selectedId || !state.userManuallySelected) {
+          const services = getServices();
+          const svc = services.find(s => s.id === newId);
+          if (!svc) return;
+          state.selectedId = newId;
+          state.userManuallySelected = true;
+          render();
+          showToast("You've selected " + svc.name, 'success');
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="toggle-date-menu"]').forEach(function(chip){
+      chip.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.dateMenuOpen = !state.dateMenuOpen;
+        state.sortMenuOpen = false;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="toggle-sort-menu"]').forEach(function(chip){
+      chip.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.sortMenuOpen = !state.sortMenuOpen;
+        state.dateMenuOpen = false;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-date-idx]').forEach(function(item){
+      item.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.shipDateIdx = parseInt(item.dataset.dateIdx);
+        state.dateMenuOpen = false;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-sort-id]').forEach(function(item){
+      item.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.sortId = item.dataset.sortId;
+        state.sortMenuOpen = false;
+        render();
+      });
+    });
+
+    document.addEventListener('click', function(){
+      if (state.dateMenuOpen || state.sortMenuOpen || state.prefsDropdownOpen) {
+        state.dateMenuOpen = false;
+        state.sortMenuOpen = false;
+        state.prefsDropdownOpen = false;
+        render();
+      }
+    }, { once: true });
+  }
+
+  function renderEdgeBuyerUnavail() {
+    const services = getServices();
+    const banner = '<div class="edge-banner edge-banner-warning">'
+      + '<svg class="edge-banner-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+      + '<div><div class="edge-banner-title">Buyer\'s selected service is not available</div>'
+      + 'USPS Priority Mail International isn\'t in the current candidate pool. We\'ve generated a recommendation based on your priority — please confirm or choose manually.</div>'
+      + '</div>';
+    renderDetailBase(services, banner);
+  }
+
+  function renderListPage() {
+    const header = '<div class="section-header"><div><div class="section-title">Awaiting shipment</div><div class="section-subtitle">6 orders</div></div></div>';
+
+    const filterActive = state.listFilterEasyShip;
+
+    const bannerHeadline = 'EasyShip could have saved you <strong>$580</strong> across <strong>47 shipments</strong>';
+    const filterBtn = filterActive
+      ? '<button class="list-breakdown-toggle filter-active" data-action="toggle-list-filter">' + checkIconSm() + ' Filtering EasyShip improvements</button>'
+      : '<button class="list-breakdown-toggle" data-action="toggle-list-filter">' + filterIcon() + ' Filter EasyShip improvements</button>';
+
+    const listBanner = state.listBannerClosed ? '' :
+      '<div class="es-banner es-banner-list">'
+      + '<div class="es-banner-icon">' + boltIcon() + '</div>'
+      + '<div class="es-banner-text">'
+      + '<div class="es-banner-main">' + bannerHeadline + ' <span class="es-banner-sparkle">✨</span></div>'
+      + '</div>'
+      + '<div class="es-banner-actions">'
+      + filterBtn
+      + '<button class="es-link-btn" data-action="easyship-connect">Connect</button>'
+      + '<button class="es-close" data-action="easyship-list-dismiss" title="Hide for 7 days">' + closeIcon() + '</button>'
+      + '</div></div>';
+
+    const tabs = '<div class="list-tabs"><div class="list-tab active">All (6)</div><div class="list-tab">Ready to process</div><div class="list-tab">Combinable</div><div class="list-tab">Exceptions</div></div>';
+    const toolbar = '<div class="list-toolbar"><input class="search-input" placeholder="Search by order number, recipient, email, or SKU" /><button class="tab-btn">Add filters</button></div>';
+    const tableHeader = '<div class="list-header"><div>Order</div><div>Recipient</div><div>Destination</div><div>Package state</div><div>Carrier service</div></div>';
+
+    const rows = [
+      { order: '#100531', recipient: 'Emma Lee', dest: 'Los Angeles, US', carrier: 'UPS Ground', status: 'selected', smartSavings: true, esImprovement: { service: 'USPS Priority Mail', savings: 2.30 } },
+      { order: '#100532', recipient: 'Noah Kim', dest: 'Seattle, US', carrier: 'FedEx Home', status: 'selected', smartSavings: true, esImprovement: { service: 'USPS Priority Mail', savings: 2.70 } },
+      { order: '#100533', recipient: 'Ava Brooks', dest: 'Toronto, CA', status: 'not-selected' },
+      { order: '#100534', recipient: 'Mia Carter', dest: 'Austin, US', carrier: 'USPS Priority', status: 'selected', smartSavings: true, esImprovement: { service: 'USPS Priority Mail Cubic', savings: 1.00 } },
+      { order: '#100535', recipient: 'Olivia Chen', dest: 'San Jose, US', status: 'unavailable' },
+      { order: '#100536', recipient: 'Liam Park', dest: 'Vancouver, CA', carrier: 'UPS Worldwide', status: 'selected', smartSavings: true, esImprovement: null },
+    ];
+
+    // When filter active, only show rows with EasyShip improvements
+    const visibleRows = filterActive ? rows.filter(r => r.esImprovement) : rows;
+    const filterIndicator = filterActive
+      ? '<div class="filter-indicator">' + sparkleIcon() + 'Showing <strong>' + visibleRows.length + ' of ' + rows.length + '</strong> shipments where EasyShip would save money. <button class="filter-clear-btn" data-action="toggle-list-filter">Clear filter</button></div>'
+      : '';
+
+    const rowsHtml = visibleRows.map(r => {
+      let carrierCell;
+      if (r.status === 'not-selected') {
+        carrierCell = '<span class="status-pill status-notselected">Not selected</span>';
+      } else if (r.status === 'unavailable') {
+        carrierCell = '<span class="status-pill status-unavailable">No options available</span>';
+      } else {
+        const star = r.smartSavings ? '<span class="ss-star" title="Selected by Smart Selection">' + sparkleIcon() + '</span>' : '';
+        const carrierName = '<span class="carrier-name-cell">' + star + r.carrier + '</span>';
+        // When filter active, show inline EasyShip suggestion below the carrier name
+        if (filterActive && r.esImprovement) {
+          carrierCell = '<div class="carrier-cell-stack">'
+            + '<div class="carrier-current">' + carrierName + '</div>'
+            + '<div class="es-suggestion-line">→ ' + sparkleIcon() + r.esImprovement.service + ' <span class="es-savings">save $' + r.esImprovement.savings.toFixed(2) + '</span></div>'
+            + '</div>';
+        } else {
+          carrierCell = carrierName;
+        }
+      }
+      return '<div class="list-row">'
+        + '<div style="font-size: 13px;">' + r.order + '</div>'
+        + '<div>' + r.recipient + '</div>'
+        + '<div style="font-size: 12px; color: var(--color-text-secondary);">' + r.dest + '</div>'
+        + '<div><span class="status-pill status-ready">Ready</span></div>'
+        + '<div>' + carrierCell + '</div></div>';
+    }).join('');
+
+    const legend = '<div class="legend-box">'
+      + '<div class="legend-row"><span class="ss-star" style="display:inline-flex;">' + sparkleIcon() + '</span><span>Selected by Smart Selection — quality-checked, cheapest among reliable carriers</span></div>'
+      + '<div class="legend-row"><span class="status-pill status-notselected">Not selected</span><span>Candidates exist but none is selected yet — user needs to review and pick</span></div>'
+      + '<div class="legend-row"><span class="status-pill status-unavailable">No options available</span><span>Candidate pool is empty — user must adjust parameters before creating a label</span></div>'
+      + '</div>';
+
+    const ssValueBanner = renderSmartSelectionValueBanner('list');
+
+    stage.innerHTML = header + ssValueBanner + listBanner + filterIndicator + tabs + toolbar + tableHeader + rowsHtml + legend;
+    bindListEvents();
+  }
+
+  function filterIcon() {
+    return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>';
+  }
+
+  function renderListBreakdown() {
+    // Per-preference sample breakdown — minimalist before/after view
+    const breakdownByPriority = {
+      optimal: {
+        improvedCount: 32,
+        type: 'cost',
+        rows: [
+          { order: '#100531', dest: 'Los Angeles', curValue: 9.50, esValue: 7.20 },
+          { order: '#100532', dest: 'Seattle', curValue: 11.20, esValue: 8.50 },
+          { order: '#100534', dest: 'Austin', curValue: 14.20, esValue: 13.20 },
+        ],
+      },
+      cheapest: {
+        improvedCount: 47,
+        type: 'cost',
+        rows: [
+          { order: '#100531', dest: 'Los Angeles', curValue: 9.50, esValue: 6.80 },
+          { order: '#100532', dest: 'Seattle', curValue: 11.20, esValue: 7.50 },
+          { order: '#100534', dest: 'Austin', curValue: 14.20, esValue: 9.40 },
+        ],
+      },
+      fastest: {
+        improvedCount: 23,
+        type: 'speed',
+        rows: [
+          { order: '#100531', dest: 'Los Angeles', curValue: 4, esValue: 1 },
+          { order: '#100532', dest: 'Seattle', curValue: 5, esValue: 2 },
+          { order: '#100534', dest: 'Austin', curValue: 3, esValue: 1 },
+        ],
+      },
+    };
+    const data = breakdownByPriority[state.priority];
+    const moreCount = data.improvedCount - data.rows.length;
+
+    const rowsHtml = data.rows.map(r => {
+      let comparison, savings;
+      if (data.type === 'cost') {
+        comparison = '$' + r.curValue.toFixed(2) + ' <span class="breakdown-arrow-inline">→</span> $' + r.esValue.toFixed(2);
+        savings = 'Save <strong>$' + (r.curValue - r.esValue).toFixed(2) + '</strong>';
+      } else {
+        comparison = r.curValue + 'd <span class="breakdown-arrow-inline">→</span> ' + r.esValue + 'd';
+        savings = '<strong>' + (r.curValue - r.esValue) + ' days faster</strong>';
+      }
+      return '<div class="breakdown-row-simple">'
+        + '<div class="breakdown-order-info"><strong>' + r.order + '</strong><span> · ' + r.dest + '</span></div>'
+        + '<div class="breakdown-compare-text">' + comparison + '</div>'
+        + '<div class="breakdown-savings">' + savings + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="list-breakdown-panel">'
+      + '<div class="list-breakdown-header">Showing 3 of ' + data.improvedCount + ' shipments that could improve</div>'
+      + rowsHtml
+      + '<div class="list-breakdown-footer">+ ' + moreCount + ' more shipments — <button class="es-link-btn" data-action="easyship-connect" style="padding: 0; vertical-align: baseline;">Connect EasyShip</button> to see all</div>'
+      + '</div>';
+  }
+
+  function renderHomePage() {
+    const ssValueBanner = renderSmartSelectionValueBanner('home');
+
+    const header = '<div class="home-header">'
+      + '<div><div class="home-title">Home</div>'
+      + '<div class="home-subtitle">Your shipping operations at a glance</div></div>'
+      + '</div>';
+
+    // Getting started card — mirrors AfterShip Shipping homepage structure
+    const onboardingCard = '<div class="home-card">'
+      + '<div class="home-card-title">Getting started <span style="font-size: 11px; color: var(--color-text-tertiary); font-weight: 400;">3/6 complete</span></div>'
+      + '<div class="home-onboarding-step">'
+      + '<div class="home-step-check done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>'
+      + '<div class="home-step-label">Connect your store and import orders</div>'
+      + '<div class="home-step-meta">Done</div></div>'
+      + '<div class="home-onboarding-step">'
+      + '<div class="home-step-check done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>'
+      + '<div class="home-step-label">Set up shipping info</div>'
+      + '<div class="home-step-meta">Done</div></div>'
+      + '<div class="home-onboarding-step">'
+      + '<div class="home-step-check done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>'
+      + '<div class="home-step-label">Configure Smart Selection preferences</div>'
+      + '<div class="home-step-meta">Done</div></div>'
+      + '<div class="home-onboarding-step">'
+      + '<div class="home-step-check"></div>'
+      + '<div class="home-step-label">Create your first shipping label</div>'
+      + '<div class="home-step-meta">2 mins</div></div>'
+      + '<div class="home-onboarding-step">'
+      + '<div class="home-step-check"></div>'
+      + '<div class="home-step-label">Automate your workflow</div>'
+      + '<div class="home-step-meta">5 mins</div></div>'
+      + '</div>';
+
+    // Right sidebar — plan info card mimicking the screenshot
+    const planCard = '<div class="home-plan-card">'
+      + '<div class="home-plan-label">SHIPPING</div>'
+      + '<div class="home-plan-name">Enterprise Standard</div>'
+      + '<div class="home-plan-meta"><strong>2,341</strong> of 9,999,999 labels used</div>'
+      + '<div class="home-plan-bar"></div>'
+      + '<div class="home-plan-meta" style="margin-top: 12px;">Quota cycle: Apr 23 – May 23, 2026</div>'
+      + '</div>';
+
+    const quickStat = '<div class="home-plan-card">'
+      + '<div class="home-plan-label">THIS MONTH</div>'
+      + '<div style="display: flex; justify-content: space-between; margin: 10px 0 4px 0;">'
+      + '<div><div style="font-size: 18px; font-weight: 600; color: var(--color-text-primary);">47</div>'
+      + '<div style="font-size: 11px; color: var(--color-text-tertiary);">Auto-routed</div></div>'
+      + '<div><div style="font-size: 18px; font-weight: 600; color: var(--color-text-primary);">$1,840</div>'
+      + '<div style="font-size: 11px; color: var(--color-text-tertiary);">Saved</div></div>'
+      + '<div><div style="font-size: 18px; font-weight: 600; color: var(--color-text-primary);">100%</div>'
+      + '<div style="font-size: 11px; color: var(--color-text-tertiary);">On-time</div></div>'
+      + '</div></div>';
+
+    stage.innerHTML = '<div class="home-page">'
+      + '<div class="home-main">'
+      + header
+      + ssValueBanner
+      + onboardingCard
+      + '</div>'
+      + '<div class="home-sidebar">'
+      + planCard
+      + quickStat
+      + '</div>'
+      + '</div>';
+
+    bindHomeEvents();
+  }
+
+  function bindHomeEvents() {
+    document.querySelectorAll('[data-action="ss-value-close"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const ctx = btn.dataset.context;
+        if (ctx === 'home') state.ssValueBannerHomeClosed = true;
+        else state.ssValueBannerListClosed = true;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="ss-view-shipments"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        state.scenario = 'list';
+        document.querySelectorAll('.tab-btn').forEach(function(t){
+          t.classList.toggle('active', t.dataset.scenario === 'list');
+        });
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="ss-view-report"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        showToast('Smart Selection report — (coming soon)');
+      });
+    });
+  }
+
+  function render() {
+    if (state.scenario === 'list') renderListPage();
+    else if (state.scenario === 'home') renderHomePage();
+    else if (state.scenario === 'edge-empty') renderEdgeEmpty();
+    else if (state.scenario === 'edge-no-rec') renderEdgeNoRec();
+    else if (state.scenario === 'edge-buyer-unavail') renderEdgeBuyerUnavail();
+    else renderDetailPage();
+  }
+
+  function showToast(msg, type) {
+    const cls = type === 'success' ? 'toast-success' : 'toast-info';
+    const icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    toastArea.innerHTML = '<div class="toast ' + cls + '">' + icon + msg + '</div>';
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(function(){ toastArea.innerHTML = ''; }, 3500);
+  }
+
+  function simulateRecalc(msg) {
+    stage.classList.add('loading-overlay');
+    setTimeout(function(){
+      stage.classList.remove('loading-overlay');
+      showToast(msg);
+    }, 600);
+  }
+
+  function bindDetailEvents() {
+    document.querySelectorAll('.service-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        const newId = card.dataset.sid;
+        if (newId !== state.selectedId) {
+          const services = getServices();
+          const svc = services.find(s => s.id === newId);
+          if (!svc) return;
+          const topId = getTopChoiceId();
+          const isDefault = (newId === topId);
+          state.selectedId = newId;
+          state.userManuallySelected = !isDefault;
+          render();
+          if (!isDefault) {
+            showToast("You've manually selected " + svc.name + " — this overrides our recommendation", 'success');
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="toggle-prefs-dropdown"]').forEach(function(el){
+      el.addEventListener('click', function(e){
+        // Don't toggle if clicking inside the dropdown panel itself
+        if (e.target.closest('.prefs-dropdown')) return;
+        e.stopPropagation();
+        state.prefsDropdownOpen = !state.prefsDropdownOpen;
+        state.dateMenuOpen = false;
+        state.sortMenuOpen = false;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-prefs-pick]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const newPriority = btn.dataset.prefsPick;
+        if (newPriority !== state.priority) {
+          state.priority = newPriority;
+          if (!state.userManuallySelected) {
+            state.selectedId = getTopChoiceId();
+          }
+          state.prefsDropdownOpen = false;
+          render();
+          const labelMap = { optimal: 'Smart Selection', cheapest: 'Lowest Price Only', fastest: 'Recommended Fastest' };
+          const msg = state.userManuallySelected
+            ? 'Preference changed — your manual selection is kept'
+            : 'Preference changed to ' + labelMap[newPriority];
+          simulateRecalc(msg);
+        } else {
+          state.prefsDropdownOpen = false;
+          render();
+        }
+      });
+    });
+
+    document.querySelectorAll('[data-action="show-all"]').forEach(function(btn){
+      btn.addEventListener('click', function(){ state.expanded = true; render(); });
+    });
+    document.querySelectorAll('[data-action="collapse"]').forEach(function(btn){
+      btn.addEventListener('click', function(){ state.expanded = false; render(); });
+    });
+
+    document.querySelectorAll('[data-action="toggle-date-menu"]').forEach(function(chip){
+      chip.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.dateMenuOpen = !state.dateMenuOpen;
+        state.sortMenuOpen = false;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="toggle-sort-menu"]').forEach(function(chip){
+      chip.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.sortMenuOpen = !state.sortMenuOpen;
+        state.dateMenuOpen = false;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-date-idx]').forEach(function(item){
+      item.addEventListener('click', function(e){
+        e.stopPropagation();
+        const idx = parseInt(item.dataset.dateIdx);
+        const oldIdx = state.shipDateIdx;
+        state.shipDateIdx = idx;
+        state.dateMenuOpen = false;
+        render();
+        if (idx !== oldIdx) {
+          if (!state.userManuallySelected) state.selectedId = getTopChoiceId();
+          simulateRecalc('Recommendations updated based on new shipping date');
+        }
+      });
+    });
+    document.querySelectorAll('[data-sort-id]').forEach(function(item){
+      item.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.sortId = item.dataset.sortId;
+        state.sortMenuOpen = false;
+        render();
+        showToast('Sort order updated');
+      });
+    });
+
+    document.querySelectorAll('[data-action="easyship-connect"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        showToast('Would navigate to EasyShip onboarding');
+      });
+    });
+    document.querySelectorAll('[data-action="easyship-dismiss"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.esBannerClosed = true;
+        showToast('Banner dismissed for this shipment');
+        render();
+      });
+    });
+
+    document.addEventListener('click', function(){
+      if (state.dateMenuOpen || state.sortMenuOpen || state.prefsDropdownOpen) {
+        state.dateMenuOpen = false;
+        state.sortMenuOpen = false;
+        state.prefsDropdownOpen = false;
+        render();
+      }
+    }, { once: true });
+  }
+
+  function bindListEvents() {
+    document.querySelectorAll('[data-action="easyship-connect"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        showToast('Would navigate to EasyShip onboarding');
+      });
+    });
+    document.querySelectorAll('[data-action="easyship-list-dismiss"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.listBannerClosed = true;
+        showToast('Banner hidden for 7 days');
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="toggle-list-filter"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.listFilterEasyShip = !state.listFilterEasyShip;
+        showToast(state.listFilterEasyShip
+          ? 'Filtered to shipments where EasyShip would save money'
+          : 'Filter cleared');
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="ss-value-close"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        const ctx = btn.dataset.context;
+        if (ctx === 'home') state.ssValueBannerHomeClosed = true;
+        else state.ssValueBannerListClosed = true;
+        showToast('Banner hidden for 7 days');
+        render();
+      });
+    });
+    document.querySelectorAll('[data-action="ss-view-report"]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        showToast('Smart Selection report — (coming soon)');
+      });
+    });
+  }
+
+  document.querySelectorAll('.tab-btn[data-scenario]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-btn[data-scenario]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      state.scenario = btn.dataset.scenario;
+      state.selectedId = state.scenario === 'buyer' ? 's1' : (state.priority === 'cheapest' ? cheapestId : state.priority === 'fastest' ? fastestId : recommendedId);
+      state.userManuallySelected = false;
+      state.expanded = false;
+      state.esBannerClosed = false;
+      state.listBannerClosed = false;
+      state.ssValueBannerListClosed = false;
+      state.ssValueBannerHomeClosed = false;
+      state.shipDateIdx = 0;
+      state.prefsOpen = false;
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

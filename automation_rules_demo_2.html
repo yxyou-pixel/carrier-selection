@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carrier Selection — Automation Rules Demo</title>
+<style>
+  :root {
+    --color-bg: #FFFFFF;
+    --color-bg-secondary: #F7F6F2;
+    --color-bg-tertiary: #F2F0E9;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #5F5C56;
+    --color-text-tertiary: #8E8A80;
+    --color-border-light: #E5E2D6;
+    --color-border-strong: #C7C2B0;
+    --color-accent: #534AB7;
+    --color-accent-bg: #EEEDFE;
+    --color-accent-border: #C7C2F0;
+    --color-accent-dark: #3C3489;
+    --color-success: #1E6F3D;
+    --color-success-bg: #DCF5E5;
+    --color-warning: #7A4F0E;
+    --color-warning-bg: #FFF6E5;
+    --border-radius: 10px;
+    --border-radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: #F0EEE5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .demo-frame {
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--color-bg);
+    border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  .demo-tabs {
+    display: flex;
+    background: var(--color-bg-secondary);
+    padding: 12px 12px 0;
+    gap: 4px;
+    border-bottom: 0.5px solid var(--color-border-light);
+  }
+  .tab-btn {
+    background: transparent;
+    border: 0.5px solid transparent;
+    border-bottom: none;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    font-family: inherit;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.5); }
+  .tab-btn.active {
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-light);
+    border-bottom: 0.5px solid var(--color-bg);
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 1;
+  }
+  .app-shell {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: 720px;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--color-bg-secondary);
+    border-right: 0.5px solid var(--color-border-light);
+    padding: 20px 12px;
+  }
+  .sidebar-brand { font-weight: 600; font-size: 15px; padding: 0 10px 16px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: rgba(0,0,0,0.04); color: var(--color-text-primary); }
+  .nav-item.active { background: var(--color-bg); color: var(--color-text-primary); font-weight: 500; }
+  .nav-section {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--color-text-tertiary);
+    padding: 16px 10px 6px;
+    font-weight: 600;
+  }
+  .nav-sub { padding-left: 22px; font-size: 12.5px; }
+
+  /* Main */
+  .main { padding: 28px 36px; overflow-y: auto; max-height: 720px; }
+  .breadcrumb { font-size: 12px; color: var(--color-text-tertiary); margin-bottom: 8px; }
+  .breadcrumb a { color: var(--color-text-tertiary); text-decoration: none; cursor: pointer; }
+  .breadcrumb a:hover { color: var(--color-text-secondary); }
+  .breadcrumb .sep { margin: 0 6px; }
+  .page-title { font-size: 22px; font-weight: 600; margin: 0 0 4px 0; }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin: 0 0 24px 0;
+  }
+
+  .section { margin-bottom: 28px; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title-row { display: flex; align-items: center; gap: 10px; }
+  .section-title { font-size: 14px; font-weight: 600; margin: 0; }
+  .section-desc {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin: 2px 0 0 0;
+  }
+  .badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge-default { background: rgba(83, 74, 183, 0.10); color: var(--color-accent-dark); }
+  .badge-active { background: var(--color-success-bg); color: var(--color-success); }
+  .badge-inactive { background: var(--color-bg-tertiary); color: var(--color-text-tertiary); }
+  .add-btn {
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .add-btn:hover { background: var(--color-accent-dark); }
+  .add-btn .plus { margin-right: 4px; font-weight: 600; }
+
+  /* Smart Selection Global Card */
+  .global-card {
+    background: linear-gradient(135deg, #FAFAFB 0%, #F4F2FE 100%);
+    border: 0.5px solid var(--color-accent-border);
+    border-radius: var(--border-radius);
+    padding: 18px 20px;
+  }
+  .global-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 12px;
+  }
+  .sparkle-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(83, 74, 183, 0.12);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-accent);
+    flex-shrink: 0;
+  }
+  .global-title { font-size: 14px; font-weight: 600; }
+  .global-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .global-preferences {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--color-accent-border);
+  }
+  .pref-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: rgba(255,255,255,0.6);
+    border: 0.5px solid var(--color-accent-border);
+    border-radius: 12px;
+    color: var(--color-accent-dark);
+  }
+  .pref-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
+  .global-action {
+    background: white;
+    border: 0.5px solid var(--color-accent-border);
+    color: var(--color-accent-dark);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .global-action:hover { background: var(--color-accent-bg); }
+
+  /* Value highlight — promotes Smart Selection */
+  .value-highlight {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    margin: 12px 0;
+    background: linear-gradient(135deg, rgba(83, 74, 183, 0.08) 0%, rgba(255, 255, 255, 0.4) 100%);
+    border: 0.5px solid rgba(83, 74, 183, 0.22);
+    border-radius: 8px;
+  }
+  .value-highlight-icon {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(83, 74, 183, 0.14);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-accent);
+  }
+  .value-highlight-text {
+    font-size: 12.5px;
+    color: var(--color-accent-dark);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .value-highlight-text strong { font-weight: 700; }
+
+  /* Toggle switch */
+  .toggle {
+    width: 36px; height: 20px;
+    background: #D9D2BC;
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.18s;
+    flex-shrink: 0;
+  }
+  .toggle::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.18s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .toggle.on { background: var(--color-accent); }
+  .toggle.on::after { transform: translateX(16px); }
+  .toggle-with-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+
+  /* Rule cards */
+  .rules-list { display: flex; flex-direction: column; gap: 10px; }
+  .rule-card {
+    background: var(--color-bg);
+    border: 0.5px solid var(--color-border-light);
+    border-radius: var(--border-radius);
+    padding: 16px 18px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .rule-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .drag-handle {
+    color: var(--color-text-tertiary);
+    font-size: 16px;
+    cursor: grab;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  .rule-info { min-width: 0; }
+  .rule-name { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .rule-details {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  .rule-detail-label { color: var(--color-text-tertiary); font-weight: 500; }
+  .rule-detail-value strong { color: var(--color-text-primary); font-weight: 600; }
+  .action-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .action-tag.specific { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
+  .menu-btn {
+    background: transparent; border: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  .menu-btn:hover { background: var(--color-bg-secondary); }
+
+  /* Detail / form views */
+  .detail-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    margin-bottom: 12px;
+    font-family: inherit;
+  }
+  .detail-back:hover { color: var(--color-text-primary); }
+  .detail-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 0.5px solid var(--color-border-light);
+  }
+  .detail-title-input {
+    font-size: 22px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    outline: none;
+  }
+  .form-section { margin-bottom: 28px; }
+  .form-label { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .form-desc {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+  }
+  .radio-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px;
+    border: 0.5px solid var(--color-border-light);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .radio-row:hover { background: var(--color-bg-secondary); }
+  .radio-row.selected {
+    border-color: var(--color-accent);
+    background: rgba(83, 74, 183, 0.04);
+  }
+  .radio-circle {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-border-strong);
+    flex-shrink: 0;
+    margin-top: 2px;
+    position: relative;
+  }
+  .radio-row.selected .radio-circle { border-color: var(--color-accent); }
+  .radio-row.selected .radio-circle::after {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--color-accent);
+  }
+  .radio-content { flex: 1; min-width: 0; }
+  .radio-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+  .radio-desc { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  .condition-builder {
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-sm);
+    padding: 14px;
+    margin-top: 8px;
+  }
+  .condition-row {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .condition-row:last-of-type { margin-bottom: 12px; }
+  .select-input, .text-input {
+    background: white;
+    border: 0.5px solid var(--color-border-strong);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--color-text-primary);
+  }
+  .add-cond-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-accent-dark);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .add-cond-btn:hover { text-decoration: underline; }
+
+  /* Action picker */
+  .action-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .action-option {
+    border: 0.5px solid var(--color-border-light);
+    border-radius: var(--border-radius-sm);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .action-option:hover { background: var(--color-bg-secondary); }
+  .action-option.selected {
+    border-color: var(--color-accent);
+    background: rgba(83, 74, 183, 0.04);
+  }
+  .action-option.disabled {
+    cursor: not-allowed;
+    background: var(--color-bg-secondary);
+    opacity: 0.7;
+  }
+  .action-option.disabled:hover { background: var(--color-bg-secondary); }
+  .action-option-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .action-option-icon {
+    width: 24px; height: 24px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .action-option-icon.specific { background: var(--color-bg-tertiary); color: var(--color-text-primary); }
+  .action-option-icon.smart { background: var(--color-accent-bg); color: var(--color-accent); }
+  .action-option-icon.skip { background: var(--color-warning-bg); color: var(--color-warning); }
+  .action-option-icon.pause { background: #FDEAE0; color: #B14A2C; }
+  .action-option-title { font-size: 13px; font-weight: 600; }
+  .action-option-desc {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+  }
+  .coming-soon-tag {
+    font-size: 9px; font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-left: auto;
+  }
+  .picker-area {
+    margin-top: 14px;
+    padding: 14px;
+    background: var(--color-bg-secondary);
+    border-radius: var(--border-radius-sm);
+  }
+  .picker-area-label { font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+
+  .form-footer {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding-top: 18px;
+    margin-top: 24px;
+    border-top: 0.5px solid var(--color-border-light);
+  }
+  .btn-secondary, .btn-primary {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-secondary { background: white; border: 0.5px solid var(--color-border-strong); color: var(--color-text-primary); }
+  .btn-secondary:hover { background: var(--color-bg-secondary); }
+  .btn-primary { background: var(--color-accent); border: none; color: white; }
+  .btn-primary:hover { background: var(--color-accent-dark); }
+
+  /* ===== Preferences view ===== */
+  .prefs-hero {
+    background: linear-gradient(135deg, #FAFAFB 0%, #F4F2FE 100%);
+    border: 0.5px solid var(--color-accent-border);
+    border-radius: var(--border-radius);
+    padding: 20px 22px;
+    margin-bottom: 22px;
+  }
+  .prefs-hero-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 6px;
+  }
+  .prefs-hero-title { font-size: 17px; font-weight: 600; }
+  .prefs-hero-tag {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(83, 74, 183, 0.12);
+    color: var(--color-accent-dark);
+    letter-spacing: 0.4px;
+  }
+  .prefs-hero-tagline {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+    margin: 4px 0 0 0;
+  }
+  .prefs-hero-tagline strong { color: var(--color-text-primary); font-weight: 600; }
+
+  /* Logic flow */
+  .logic-flow {
+    background: rgba(255, 255, 255, 0.6);
+    border: 0.5px solid var(--color-accent-border);
+    border-radius: 8px;
+    margin-top: 16px;
+    overflow: hidden;
+  }
+  .logic-flow-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-accent);
+    font-weight: 600;
+    padding: 10px 14px;
+    border-bottom: 0.5px solid #DCD8F4;
+    background: rgba(83, 74, 183, 0.04);
+  }
+  .logic-step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 14px;
+    border-top: 0.5px solid #E8E5F5;
+  }
+  .logic-step:nth-of-type(2) { border-top: none; }
+  .logic-step.final { background: rgba(83, 74, 183, 0.06); }
+  .logic-num {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(83, 74, 183, 0.12);
+    color: var(--color-accent-dark);
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .logic-step.final .logic-num { background: var(--color-accent); color: white; }
+  .logic-step.final .logic-num svg { width: 11px; height: 11px; }
+  .logic-content { flex: 1; min-width: 0; }
+  .logic-title-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+  }
+  .logic-title { font-size: 12.5px; font-weight: 600; }
+  .logic-desc {
+    font-size: 11.5px;
+    color: var(--color-accent);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+  .logic-status {
+    font-size: 9.5px; font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+  }
+
+  /* Tune section */
+  .tune-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tune-section-desc {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin: 0 0 14px 0;
+    line-height: 1.5;
+  }
+  .tune-section-desc strong { color: var(--color-text-primary); font-weight: 600; }
+
+  .pref-filter-card {
+    background: var(--color-bg);
+    border: 0.5px solid var(--color-border-light);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .pref-filter-card.off { opacity: 0.65; }
+  .pref-filter-header {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px;
+  }
+  .pref-filter-title-block { flex: 1; min-width: 0; }
+  .pref-filter-titlex { font-size: 13px; font-weight: 600; }
+  .pref-filter-tagline {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+    line-height: 1.45;
+  }
+  .pref-filter-body { padding: 0 14px 14px 52px; }
+  .filter-customize-label {
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .optional-tag {
+    font-size: 9.5px; font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 9px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .filter-customize-desc {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    margin: 4px 0 10px 0;
+    line-height: 1.5;
+  }
+  .add-route-btn {
+    background: transparent;
+    border: 0.5px dashed var(--color-border-strong);
+    color: var(--color-text-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .add-route-btn:hover { background: var(--color-bg-secondary); color: var(--color-text-primary); }
+
+  /* View visibility */
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="demo-frame">
+
+  <div class="demo-tabs">
+    <button class="tab-btn active" data-view="list">List view</button>
+    <button class="tab-btn" data-view="prefs">Configure preferences</button>
+    <button class="tab-btn" data-view="edit-specific">Edit rule</button>
+  </div>
+
+  <div class="app-shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">Shipping</div>
+      <nav class="sidebar-nav">
+        <a class="nav-item">Home</a>
+        <a class="nav-item">Orders</a>
+        <a class="nav-item">Carriers</a>
+        <a class="nav-item">Label history</a>
+        <div class="nav-section">Settings</div>
+        <a class="nav-item">General</a>
+        <a class="nav-item active">Carrier Selection</a>
+        <a class="nav-item nav-sub">— Automation Rules</a>
+        <a class="nav-item nav-sub">— Smart Selection</a>
+        <a class="nav-item">Checkout options</a>
+        <a class="nav-item">Notifications</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- ===== VIEW 1: LIST VIEW ===== -->
+      <div class="view active" data-view="list">
+        <div class="breadcrumb">
+          <a>Settings</a><span class="sep">›</span><a>Carrier Selection</a>
+        </div>
+        <h1 class="page-title">Carrier Selection</h1>
+        <p class="page-subtitle">Configure how carriers are selected for your shipments. Manual rules take priority over the global Smart Selection.</p>
+
+        <!-- Global Smart Selection Card -->
+        <div class="section">
+          <div class="section-header">
+            <div>
+              <div class="section-title-row">
+                <h2 class="section-title">Smart Selection</h2>
+                <span class="badge badge-default">Global Default</span>
+              </div>
+              <p class="section-desc">Applied to orders <strong>not matched</strong> by any rule below.</p>
+            </div>
+          </div>
+
+          <div class="global-card">
+            <div class="global-card-top">
+              <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                <div class="sparkle-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0l2.5 7.5L22 10l-7.5 2.5L12 20l-2.5-7.5L2 10l7.5-2.5L12 0z"/></svg>
+                </div>
+                <div>
+                  <div class="global-title">AfterShip Smart Selection</div>
+                  <div class="global-meta">Automatically picks the cheapest qualifying service for every shipment.</div>
+                </div>
+              </div>
+              <div class="toggle-with-label">
+                <span>Enabled</span>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+
+            <!-- Value highlight -->
+            <div class="value-highlight">
+              <div class="value-highlight-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+              </div>
+              <div class="value-highlight-text">
+                Smart Selection saves merchants <strong>~8%</strong> on shipping costs on average and lifts on-time delivery rate to <strong>~95%</strong>.
+              </div>
+            </div>
+
+            <div class="global-preferences">
+              <span class="pref-chip"><span class="dot"></span>Delivery time check · &gt;80% prob. of EDD</span>
+              <span class="pref-chip"><span class="dot"></span>Reliability check · exception &lt;2%</span>
+              <button class="global-action" data-go="prefs" style="margin-left: auto;">Configure preferences →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automation Rules Section -->
+        <div class="section">
+          <div class="section-header">
+            <div>
+              <div class="section-title-row">
+                <h2 class="section-title">Automation Rules</h2>
+              </div>
+              <p class="section-desc">Rules apply <strong>top to bottom</strong>. First match wins — <strong>overrides Smart Selection</strong>.</p>
+            </div>
+            <button class="add-btn" data-go="edit-specific"><span class="plus">+</span>Add rule</button>
+          </div>
+
+          <div class="rules-list">
+
+            <div class="rule-card">
+              <div class="drag-handle">⋮⋮</div>
+              <div class="rule-info">
+                <div class="rule-name">PO Box deliveries</div>
+                <div class="rule-details">
+                  <div class="rule-detail-label">When</div>
+                  <div class="rule-detail-value">Destination <strong>address contains "PO Box"</strong></div>
+                  <div class="rule-detail-label">Action</div>
+                  <div class="rule-detail-value">
+                    <span class="action-tag specific">📦 Use specific service</span>
+                    <span style="margin-left: 8px;">USPS Ground Advantage</span>
+                  </div>
+                </div>
+              </div>
+              <div class="toggle-with-label"><span class="badge badge-active">Active</span></div>
+              <button class="menu-btn">⋯</button>
+            </div>
+
+            <div class="rule-card">
+              <div class="drag-handle">⋮⋮</div>
+              <div class="rule-info">
+                <div class="rule-name">Heavy oversize items</div>
+                <div class="rule-details">
+                  <div class="rule-detail-label">When</div>
+                  <div class="rule-detail-value">Package weight <strong>&gt; 30 lbs</strong></div>
+                  <div class="rule-detail-label">Action</div>
+                  <div class="rule-detail-value">
+                    <span class="action-tag specific">📦 Use specific service</span>
+                    <span style="margin-left: 8px;">UPS — Ground</span>
+                  </div>
+                </div>
+              </div>
+              <div class="toggle-with-label"><span class="badge badge-active">Active</span></div>
+              <button class="menu-btn">⋯</button>
+            </div>
+
+            <div class="rule-card">
+              <div class="drag-handle">⋮⋮</div>
+              <div class="rule-info">
+                <div class="rule-name">Express to West Coast</div>
+                <div class="rule-details">
+                  <div class="rule-detail-label">When</div>
+                  <div class="rule-detail-value">Destination state in <strong>CA, OR, WA</strong></div>
+                  <div class="rule-detail-label">Action</div>
+                  <div class="rule-detail-value">
+                    <span class="action-tag specific">📦 Use specific service</span>
+                    <span style="margin-left: 8px;">FedEx — 2Day</span>
+                  </div>
+                </div>
+              </div>
+              <div class="toggle-with-label"><span class="badge badge-inactive">Inactive</span></div>
+              <button class="menu-btn">⋯</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="padding: 14px 16px; background: var(--color-bg-secondary); border-radius: var(--border-radius-sm); display: flex; gap: 10px; align-items: flex-start;">
+          <div style="color: var(--color-text-tertiary); font-size: 16px;">ⓘ</div>
+          <div style="font-size: 12px; color: var(--color-text-secondary); line-height: 1.5;">
+            Orders not matching any rule fall back to <strong>global Smart Selection</strong>. Manual rules above always take priority.
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== VIEW 2: Configure Preferences ===== -->
+      <div class="view" data-view="prefs">
+        <button class="detail-back" data-go="list">← Back to Carrier Selection</button>
+
+        <div class="breadcrumb">
+          <a data-go="list">Carrier Selection</a><span class="sep">›</span><a>Smart Selection preferences</a>
+        </div>
+
+        <div class="form-section">
+          <div class="tune-section-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="color: var(--color-accent);"><path d="M12 0l2.5 7.5L22 10l-7.5 2.5L12 20l-2.5-7.5L2 10l7.5-2.5L12 0z"/></svg>
+            Tune your AI copilot
+            <span class="optional-tag">optional</span>
+          </div>
+          <p class="tune-section-desc">AI uses smart defaults that work for most merchants. <strong>Adjust below</strong> if your business needs different priorities — Smart Selection still picks the cheapest qualifying service.</p>
+
+          <div class="pref-filter-card">
+            <div class="pref-filter-header">
+              <div class="toggle on" style="margin-top: 2px;"></div>
+              <div class="pref-filter-title-block">
+                <div class="pref-filter-titlex">Delivery time check</div>
+                <div class="pref-filter-tagline">AI default: pick services with &gt;80% probability of meeting EDD</div>
+              </div>
+            </div>
+            <div class="pref-filter-body">
+              <div class="filter-customize-label">
+                Customize delivery check rule
+                <span class="optional-tag">optional</span>
+              </div>
+              <div class="filter-customize-desc">Smart Selection will pick the service based on customized rules.</div>
+              <button class="add-route-btn">+ Add route SLA</button>
+            </div>
+          </div>
+
+          <div class="pref-filter-card">
+            <div class="pref-filter-header">
+              <div class="toggle on" style="margin-top: 2px;"></div>
+              <div class="pref-filter-title-block">
+                <div class="pref-filter-titlex">Reliability check</div>
+                <div class="pref-filter-tagline">AI default: exclude carriers with high exception rate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn-secondary" data-go="list">Cancel</button>
+          <button class="btn-primary" data-go="list">Save preferences</button>
+        </div>
+      </div>
+
+      <!-- ===== VIEW 3: Edit Rule ===== -->
+      <div class="view" data-view="edit-specific">
+        <button class="detail-back" data-go="list">← Back to Carrier Selection</button>
+        <div class="detail-header">
+          <input class="detail-title-input" value="PO Box deliveries" />
+          <div class="toggle-with-label" style="flex-shrink: 0; margin-left: 16px;">
+            <span>Active</span>
+            <div class="toggle on"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-label">When should this rule apply?</div>
+          <div class="radio-row">
+            <div class="radio-circle"></div>
+            <div class="radio-content"><div class="radio-title">Apply to every order</div></div>
+          </div>
+          <div class="radio-row selected">
+            <div class="radio-circle"></div>
+            <div class="radio-content">
+              <div class="radio-title">Apply to orders matching conditions</div>
+              <div class="condition-builder">
+                <div class="condition-row">
+                  <select class="select-input"><option>Destination address</option></select>
+                  <select class="select-input"><option>contains</option></select>
+                  <input class="text-input" value="PO Box" />
+                </div>
+                <button class="add-cond-btn">+ Add condition</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-label">What should happen?</div>
+          <p class="form-desc">Pick one action. <strong>Manual rules take priority over Smart Selection.</strong></p>
+
+          <div class="action-picker">
+            <div class="action-option selected">
+              <div class="action-option-header">
+                <div class="action-option-icon specific">📦</div>
+                <div class="action-option-title">Use specific carrier/service</div>
+              </div>
+              <div class="action-option-desc">Force a specific carrier service for matching orders.</div>
+            </div>
+            <div class="action-option disabled">
+              <div class="action-option-header">
+                <div class="action-option-icon smart">✨</div>
+                <div class="action-option-title">Apply Smart Selection</div>
+                <span class="coming-soon-tag">Coming soon</span>
+              </div>
+              <div class="action-option-desc">Auto-pick with custom Smart Selection preferences for this rule.</div>
+            </div>
+            <div class="action-option disabled">
+              <div class="action-option-header">
+                <div class="action-option-icon skip">⏭</div>
+                <div class="action-option-title">Skip Smart Selection</div>
+                <span class="coming-soon-tag">Coming soon</span>
+              </div>
+              <div class="action-option-desc">Leave unselected for manual selection.</div>
+            </div>
+            <div class="action-option disabled">
+              <div class="action-option-header">
+                <div class="action-option-icon pause">⏸</div>
+                <div class="action-option-title">Pause for review</div>
+                <span class="coming-soon-tag">Coming soon</span>
+              </div>
+              <div class="action-option-desc">Mark as pending review before label creation.</div>
+            </div>
+          </div>
+
+          <div class="picker-area">
+            <div class="picker-area-label">Which carrier/service to use?</div>
+            <select class="select-input" style="width: 100%; max-width: 360px;">
+              <option>USPS — Ground Advantage</option>
+              <option>USPS — Priority Mail</option>
+              <option>UPS — Ground</option>
+              <option>FedEx — Home Delivery</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn-secondary" data-go="list">Cancel</button>
+          <button class="btn-primary" data-go="list">Save rule</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  function switchView(viewName) {
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === viewName)
+    );
+    document.querySelectorAll('.view').forEach(v =>
+      v.classList.toggle('active', v.dataset.view === viewName)
+    );
+    document.querySelector('.main').scrollTop = 0;
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  document.querySelectorAll('[data-go]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      switchView(el.dataset.go);
+    });
+  });
+
+  document.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', e => {
+      e.stopPropagation();
+      t.classList.toggle('on');
+    });
+  });
+
+  document.querySelectorAll('.form-section').forEach(section => {
+    const radios = section.querySelectorAll('.radio-row');
+    radios.forEach(r => {
+      r.addEventListener('click', () => {
+        radios.forEach(rr => rr.classList.remove('selected'));
+        r.classList.add('selected');
+      });
+    });
+  });
+
+  document.querySelectorAll('.action-picker').forEach(picker => {
+    const opts = picker.querySelectorAll('.action-option:not(.disabled)');
+    opts.forEach(o => {
+      o.addEventListener('click', () => {
+        picker.querySelectorAll('.action-option').forEach(oo => oo.classList.remove('selected'));
+        o.classList.add('selected');
+      });
+    });
+  });
+</script>
+</body>
+</html>
